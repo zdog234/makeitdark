@@ -54,6 +54,8 @@ injectable = BEGIN_MARKER + " \n\
 }); \n " + END_MARKER
 
 slack_theme_path = ""
+print("This script is only intended for usage with Slack versions < 4.0")
+print("For 4.0 support, run sudo ./makeitdark.sh")
 
 if platform == "linux" or platform == "linux2":
     # linux
@@ -65,11 +67,21 @@ elif platform == "darwin":
     slack_theme_path = "/Applications/Slack.app/Contents/Resources/app.asar.unpacked/src/static/ssb-interop.js"
 else:
     # Probably Windows
-    slack_root_path = os.path.join(os.environ['LOCALAPPDATA'], "slack")
-    most_recent = sorted([slack_version for slack_version in os.listdir(slack_root_path) if slack_version.startswith("app-") and os.path.isdir(os.path.join(slack_root_path, slack_version))], reverse=True)[0]
-    print("Searching for most recent slack update in {0}".format(slack_root_path))
-    print("Found {0}".format(most_recent))
-    slack_theme_path = os.path.join(slack_root_path, most_recent, "resources", "app.asar.unpacked", "src", "static", "ssb-interop.js")
+    for root in os.environ['LOCALAPPDATA'], os.environ['PROGRAMFILES']:
+        slack_root_path = os.path.join(root, "slack")
+        slack_versions = sorted([slack_version for slack_version in os.listdir(slack_root_path) if slack_version.startswith("app-") and os.path.isdir(os.path.join(slack_root_path, slack_version))], reverse=True)
+        if not slack_versions:
+            continue
+
+        most_recent = slack_versions[0]
+        print("Searching for most recent slack update in {0}".format(slack_root_path))
+        print("Found {0}".format(most_recent))
+        slack_theme_path = os.path.join(slack_root_path, most_recent, "resources", "app.asar.unpacked", "src", "static", "ssb-interop.js")
+        if not os.path.exists(slack_theme_path):
+            continue
+        break
+    else:
+        raise EnvironmentError("Could not find slack installation")
 
 if undo_mode:
     with open(slack_theme_path, "r+") as f:
